@@ -1,5 +1,11 @@
 
 #include "BinarySearchTree.h"
+#include <vector>
+//Всатвка O(log2(n))
+// Поиск O(log2(n))
+// Удаление O(log2(n))
+// Повороты O(1)
+// Доступ O(log2(n))
 // Класс AVLTreeNode наследуется от TreeNode и имеет дополнительное поле для коэффициента баланса.
 template<typename T>
 class AVLTreeNode : public TreeNode<T> {
@@ -38,23 +44,28 @@ public:
         return *this;
     }
 
+    // Преобразовательт указателя на (на левый) TreeNode в указатель на AVLTreeNode
     AVLTreeNode<T>* getLeft() {
         return static_cast<AVLTreeNode<T>*>(this->n_left);
     }
 
+    // Преобразовательт указателя на (на правый) TreeNode в указатель на AVLTreeNode
     AVLTreeNode<T>* getRight() {
         return static_cast<AVLTreeNode<T>*>(this->n_right);
     }
 
+    // Преобразовательт указателя на (на левый) TreeNode в указатель на AVLTreeNode
     const AVLTreeNode<T>* getLeft() const {
         return static_cast<const AVLTreeNode<T>*>(this->n_left);
     }
 
+    // Преобразовательт указателя на (на правый) TreeNode в указатель на AVLTreeNode
     const AVLTreeNode<T>* getRight() const {
         return static_cast<const AVLTreeNode<T>*>(this->n_right);
     }
+
     // Коэффициент баланса узла.
-    int balanceFactor;
+    short int balanceFactor;
 
 
 };
@@ -120,18 +131,22 @@ private:
 
         if (node->balanceFactor > 1) {
             if (getHeight(node->getLeft()->getLeft()) >= getHeight(node->getLeft()->getRight())) {
+                //Одинарный правый поворот
                 node = rotateRight(node);
             }
             else {
+                //Большой правый поворот
                 node->n_left = rotateLeft(node->getLeft());
                 node = rotateRight(node);
             }
         }
         else if (node->balanceFactor < -1) {
             if (getHeight(node->getRight()->getRight()) >= getHeight(node->getRight()->getLeft())) {
+                //Одинарный левый поворот
                 node = rotateLeft(node);
             }
             else {
+                //Большой левый поворот
                 node->n_right = rotateRight(node->getRight());
                 node = rotateLeft(node);
             }
@@ -227,7 +242,7 @@ public:
     // Метод для вывода дерева в виде дерева.
     void printTree() {
         if (root)
-        printTreeHelper(root, 0);
+            printTreeHelper(root, 0);
     }
 
 
@@ -276,47 +291,59 @@ public:
             throw out_of_range("Value not found");
     }
 
+
+    //Класс Итератор для AVLTreeNode (LNR, Inorder)
     class Iterator {
     private:
+        AVLTreeNode<T>* root;
         stack<AVLTreeNode<T>*> nodeStack;
 
     public:
-        Iterator(AVLTreeNode<T>* root) {
-            pushLeftBranch(root);
+        // Конструктор итератора
+        Iterator(AVLTreeNode<T>* n_root) {
+            root = n_root;
+            pushLeftBranch(n_root);
         }
 
+        // Оператор проверки на неравенства
         bool operator!=(const Iterator& other) const {
             return !(hasNext() == false && other.hasNext() == false);
         }
 
+        // Оператор проверки на равенства
         bool operator==(const Iterator& other) const {
             return nodeStack.empty() == other.nodeStack.empty();
         }
 
+        // Проверка есть ли следующий элемент
         bool hasNext() const {
 
             return !nodeStack.empty();
         }
 
+        // Оператор разыменования
         T& operator*() const {
             return nodeStack.top()->n_data;
         }
 
-
+        // Получение информации 
         T& data() {
             return nodeStack.top()->n_data;
         }
 
+        // Оператор инкремента
         Iterator& operator++() {
             return next();
         }
 
+        // Сброс итератора
         void reset() {
             while (!nodeStack.empty())
                 nodeStack.pop();
-            inorderStack(root, nodeStack);
+            pushLeftBranch(root);
         }
 
+        // Переход к следующему элементы
         Iterator& next() {
             AVLTreeNode<T>* currentNode;
             if (!hasNext()) {
@@ -329,6 +356,7 @@ public:
         }
 
     private:
+        // Метод помещающий все левые узлы узла node в nodeStack
         void pushLeftBranch(AVLTreeNode<T>* node) {
             while (node != nullptr) {
                 nodeStack.push(node);
@@ -337,11 +365,12 @@ public:
         }
     };
 
-
+    // возвращает итератор на начало дерева
     Iterator begin() const {
         return Iterator(root);
     }
 
+    // Переносит итератор на конец дерева
     Iterator end() const {
         return Iterator(nullptr);
     }
@@ -353,6 +382,7 @@ public:
         }
     }
 
+    // тестирование
     static void AVLTreeRunTest() {
         AVLTree<int> tree;
 
@@ -365,6 +395,7 @@ public:
         tree.insert(20);
         tree.insert(5);
         tree.insert(15);
+        tree.printTree();
         assert(tree.find(5) != nullptr);  // Должен найти 5
         assert(tree.find(15) != nullptr); // Должен найти 15
         assert(tree.find(25) == nullptr); // Не должен найти 25
@@ -386,7 +417,7 @@ public:
         tree.insert(8);
 
         AVLTree<int>::Iterator it = tree.begin();
-        for (int val: tree) {
+        for (int val : tree) {
             cout << val << " ";
         }
         assert(it != tree.end()); // Должен иметь хотя бы один элемент
@@ -407,8 +438,88 @@ public:
         assert(tree.find(5) == nullptr);  // Все элементы должны быть удалены
         assert(tree.begin() == tree.end()); // Итератор должен быть пустым
 
+        // Тестирование поворотов дерева
+        tree.clear();
+        vector<int> right;
+        size_t i;
+
+        // Поворот право право (малый правый поворот)
+        tree.insert(7);
+        tree.insert(8);
+        tree.insert(5);
+        tree.insert(6);
+        tree.insert(3);
+        tree.insert(4);
+        tree.insert(1);
+        right = { 1, 3, 4, 5, 6, 7, 8 };
+        i = 0;
+        for (int value : tree)
+        {
+            assert(abs(tree.getBalanceFactor(value)) < 2);
+            i++;
+        }
+        tree.clear();
+
+
+        // Поворот лево лево (малый левый поворот)
+        tree.insert(2);
+        tree.insert(1);
+        tree.insert(4);
+        tree.insert(3);
+        tree.insert(6);
+        tree.insert(5);
+        tree.insert(7);
+        right.clear();
+        right = { 1, 2, 3, 4, 5, 6, 7 };
+        i = 0;
+        for (int value : tree)
+        {
+            assert(abs(tree.getBalanceFactor(value)) < 2);
+            i++;
+        }
+        tree.clear();
+
+        // Поворот право лево
+        tree.insert(6);
+        tree.insert(7);
+        tree.insert(2);
+        tree.insert(1);
+        tree.insert(4);
+        tree.insert(3);
+        tree.insert(5);
+        right.clear();
+        right = { 1, 2, 3, 4, 5, 6, 7 };
+        i = 0;
+        for (int value : tree)
+        {
+            assert(abs(tree.getBalanceFactor(value)) < 2);
+            i++;
+        }
+        tree.clear();
+
+        // Поворот лево право
+        tree.insert(2);
+        tree.insert(1);
+        tree.insert(6);
+        tree.insert(4);
+        tree.insert(3);
+        tree.insert(5);
+        tree.insert(7);
+        AVLTree<int>::Iterator it5 = tree.begin();
+        right.clear();
+        right = { 1, 2, 3, 4, 5, 6, 7 };
+        i = 0;
+        for (int value : tree)
+        {
+            assert(*it5 == right[i]);
+            ++it5;
+            i++;
+        }
+        tree.clear();
+
         std::cout << "All tests passed successfully!" << std::endl;
     }
+
 
 };
 // Вспомогательный метод для поиска элемента в дереве.
